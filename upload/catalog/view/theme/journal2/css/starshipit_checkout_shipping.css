@@ -1,0 +1,9 @@
+.journal-checkout .spw > .checkout-shipping-methods .radio label {
+	border-width: 0;
+}
+.journal-checkout .spw > .checkout-shipping-methods .radio label+label {
+	margin-left: 47px;
+}
+.journal-checkout .spw > .checkout-shipping-methods .radio label:last-child {
+	border-bottom-width: 1px;
+}

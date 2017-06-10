@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+	<code>starshipit_1</code>
+	<name>StarShipIt Shipping</name>
+	<version>1.0</version>
+	<author>UitLab</author>
+	<link>http://uitlab.com</link>
+	<file path="catalog/controller/journal2/checkout.php">
+		<operation>
+			<search><![CDATA[
+			$this->document->setTitle($this->language->get('heading_title'));
+			]]></search>
+			<add position="after"><![CDATA[
+			$this->document->addStyle('catalog/view/theme/journal2/css/starshipit_checkout_shipping.css');
+			]]></add>
+		</operation>
+		<operation>
+			<search index="1"><![CDATA[
+			$this->session->data['shipping_methods'][$shipping[0]]['quote'][$shipping[1]];
+			]]></search>
+			<add position="after"><![CDATA[
+			if (
+				isset($this->request->post['shipping_method_safe_drop']) &&
+				(
+					$this->request->post['shipping_method_safe_drop'] === 'not_allowed' ||
+					$this->request->post['shipping_method_safe_drop'] === 'allowed'
+				) &&
+				isset($this->session->data['shipping_method']['safe_drop_posible']) &&
+				$this->session->data['shipping_method']['safe_drop_posible'] &&
+				isset($this->session->data['shipping_methods'][$shipping[0]]['safe_drop_suffix'])
+			) {
+				$this->session->data['shipping_method']['shipping_method_safe_drop'] = $this->request->post['shipping_method_safe_drop'];
+			} else {
+				$this->session->data['shipping_method']['shipping_method_safe_drop'] = 'no_safedrop';
+			}
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			$order_data['shipping_code'] = Journal2Utils::getProperty($this->request->post, 'shipping_method');
+			]]></search>
+			<add position="after"><![CDATA[
+			if (
+				isset($this->request->post['shipping_method_safe_drop']) &&
+				$this->request->post['shipping_method_safe_drop'] === 'allowed' &&
+				isset($shipping_method['safe_drop_posible']) &&
+				$shipping_method['safe_drop_posible'] &&
+				isset($this->session->data['shipping_methods'][$shipping[0]]['safe_drop_suffix'])
+			) {
+				$order_data['shipping_code'] = $order_data['shipping_code'] . $this->session->data['shipping_methods'][$shipping[0]]['safe_drop_suffix'];
+			}
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/view/theme/journal2/template/journal2/checkout/checkout.tpl">
+		<operation>
+			<search><![CDATA[
+			$(document).trigger('journal_checkout_shipping_changed', this.value);
+			]]></search>
+			<add position="replace"><![CDATA[
+			$(document).trigger('journal_checkout_shipping_changed', [this.value, $('input[data-for="' + this.id + '"]').prop('checked')]);
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			$(document).delegate('input[name="payment_method"]', 'change', function() {
+			]]></search>
+			<add position="before"><![CDATA[
+			$(document).delegate('input[name="shipping_method_safe_drop"]', 'change', function() {
+				$(document).trigger('journal_checkout_shipping_changed', [$('input#' + this.getAttribute('data-for')).val(), this.checked]);
+			});
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			data[$(this).attr('name')] = $(this).val();
+			]]></search>
+			<add position="replace" offset="1"><![CDATA[
+				if ($(this).attr('name') === 'shipping_method') {
+					data[$(this).attr('name')] = $(this).val();
+
+					if ($('input[data-for="' + this.id + '"]')[0]) {
+						data['shipping_method_safe_drop'] = $('input[data-for="' + this.id + '"]').prop('checked') ? 'allowed' : 'not_allowed';
+					}
+
+				} else if ($(this).attr('name') === 'shipping_method_safe_drop') {
+
+				} else {
+					data[$(this).attr('name')] = $(this).val();
+				}
+			});
+
+			if (data['shipping_method_safe_drop'] === undefined) {
+				data['shipping_method_safe_drop'] = 'no_safedrop';
+			}
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			$(document).on('journal_checkout_shipping_changed', function (e, value) {
+			]]></search>
+			<add position="replace"><![CDATA[
+			$(document).on('journal_checkout_shipping_changed', function (e, value, safedrop) {
+			]]></add>
+		</operation>
+		<operation>
+			<search><![CDATA[
+			shipping_method: value
+			]]></search>
+			<add position="replace"><![CDATA[
+			shipping_method: value,
+			shipping_method_safe_drop: (safedrop === undefined) ? 'no_safedrop' : safedrop ? 'allowed' : 'not_allowed'
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/view/theme/journal2/template/journal2/checkout/shipping_methods.tpl">
+		<operation>
+			<search><![CDATA[
+			<?php if (!$shipping_method['error']) { ?>
+			]]></search>
+			<add position="replace" offset="10"><![CDATA[
+			<?php if (!$shipping_method['error']) { ?>
+			<?php $suffix = $shipping_method['safe_drop_suffix']; ?>
+			<?php $index = 0 ?>
+			<?php foreach ($shipping_method['quote'] as $quote) { ?>
+				<div class="radio">
+				<?php $dotPos = strpos($quote['code'], '.')?>
+				<?php $id = $dotPos ? substr($quote['code'], 0, $dotPos) : $quote['code'] ?>
+				<?php $safeDrop = (isset($quote['safe_drop_posible']) && $quote['safe_drop_posible'] === true) ?>
+					<label>
+						<?php if ($quote['code'] == $code || !$code) { ?>
+							<?php $code = $quote['code']; ?>
+							<input type="radio"
+								id="<?php echo $id . '_' . $index; ?>"
+								name="shipping_method" value="<?php echo $quote['code']; ?>" checked="checked"/>
+						<?php } else { ?>
+							<input type="radio"
+								id="<?php echo $id . '_' . $index; ?>"
+								name="shipping_method" value="<?php echo $quote['code']; ?>"/>
+						<?php } ?>
+						<?php echo $quote['title']; ?> - <?php echo $quote['text']; ?></label>
+				<?php if ($safeDrop) { ?>
+					<label>
+						<input type="checkbox" name="shipping_method_safe_drop" data-for="<?php echo $id . '_' . $index; ?>" value="safe_drop">
+						<?php echo $shipping_method['checkbox_text']; ?>
+					</label>
+				<?php } ?>
+				<?php $index++ ?>
+			]]></add>
+		</operation>
+	</file>
+	<file path="catalog/model/journal2/checkout.php">
+		<operation>
+			<search><![CDATA[
+			'sort_order' => $quote['sort_order'],
+			]]></search>
+			<add position="after"><![CDATA[
+			'safe_drop_suffix' => isset($quote['safe_drop_suffix']) ? $quote['safe_drop_suffix'] : false,
+			'checkbox_text' => isset($quote['checkbox_text']) ? $quote['checkbox_text'] : false,
+			]]></add>
+		</operation>
+	</file>
+</modification>
