@@ -2,7 +2,7 @@
 <modification>
 	<code>starshipit_1</code>
 	<name>StarShipIt Shipping</name>
-	<version>1.0</version>
+	<version>1.0.1</version>
 	<author>UitLab</author>
 	<link>http://uitlab.com</link>
 	<file path="catalog/controller/journal2/checkout.php">
@@ -67,7 +67,9 @@
 			]]></search>
 			<add position="before"><![CDATA[
 			$(document).delegate('input[name="shipping_method_safe_drop"]', 'change', function() {
-				$(document).trigger('journal_checkout_shipping_changed', [$('input#' + this.getAttribute('data-for')).val(), this.checked]);
+				if ($('input#' + this.getAttribute('data-for'))[0].checked) {
+					$(document).trigger('journal_checkout_shipping_changed', [$('input#' + this.getAttribute('data-for')).val(), this.checked]);
+				}
 			});
 			]]></add>
 		</operation>
